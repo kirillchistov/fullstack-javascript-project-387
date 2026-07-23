@@ -1,8 +1,10 @@
 # Вызов агента OpenCode из комментариев в issue и PR: /oc или /opencode
 # Документация: https://opencode.ai/docs/github/
-# Требуется:
-#   1) установленный GitHub App: https://github.com/apps/opencode-agent
-#   2) секрет ANTHROPIC_API_KEY в Settings → Secrets and variables → Actions
+# Модель — через OpenCode Zen (https://opencode.ai/docs/zen/):
+#   big-pickle — бесплатная; для платных моделей (например,
+#   opencode/claude-sonnet-4-5) добавьте секрет OPENCODE_API_KEY
+#   в Settings → Secrets and variables → Actions.
+# Требуется установленный GitHub App: https://github.com/apps/opencode-agent
 name: opencode
 
 on:
@@ -29,6 +31,6 @@ jobs:
       - name: Run OpenCode
         uses: anomalyco/opencode/github@latest
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
         with:
-          model: anthropic/claude-sonnet-4-20250514
+          model: opencode/big-pickle
