@@ -4,7 +4,9 @@
 #   big-pickle — бесплатная; для платных моделей (например,
 #   opencode/claude-sonnet-4-5) добавьте секрет OPENCODE_API_KEY
 #   в Settings → Secrets and variables → Actions.
-# Требуется установленный GitHub App: https://github.com/apps/opencode-agent
+# Работает через встроенный GITHUB_TOKEN раннера (без установки GitHub App);
+# альтернатива — установить https://github.com/apps/opencode-agent,
+# тогда комментарии будут приходить от имени приложения.
 name: opencode
 
 on:
@@ -21,6 +23,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
+      contents: write
+      pull-requests: write
+      issues: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -32,5 +37,7 @@ jobs:
         uses: anomalyco/opencode/github@latest
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           model: opencode/big-pickle
+          use_github_token: true
