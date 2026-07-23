@@ -1,0 +1,10 @@
+node_modules/
+tsp-output/
+.env
+dist/
+*.log
+.DS_Store
+
+# Playwright
+e2e/test-results/
+e2e/playwright-report/
