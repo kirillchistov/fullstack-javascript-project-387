@@ -95,11 +95,6 @@ export function createStore() {
     }
   }
 
-  const nextBookingId = () => {
-    const row = db.prepare('SELECT COALESCE(MAX(id), 0) + 1 AS next_id FROM bookings').get();
-    return row.next_id;
-  };
-
   return {
     get owner() {
       const row = db.prepare('SELECT id, name, email FROM owner WHERE id = 1').get();
@@ -146,14 +141,17 @@ export function createStore() {
       return { timezone: avail.timezone, rules };
     },
     setAvailability({ timezone, rules }) {
-      db.prepare('UPDATE availability SET timezone = ? WHERE id = 1').run(timezone);
-      db.prepare('DELETE FROM availability_rules').run();
-      const ins = db.prepare(
-        'INSERT INTO availability_rules (weekday, start_time, end_time) VALUES (?, ?, ?)',
-      );
-      for (const rule of rules) {
-        ins.run(rule.weekday, rule.startTime, rule.endTime);
-      }
+      const replace = db.transaction(() => {
+        db.prepare('UPDATE availability SET timezone = ? WHERE id = 1').run(timezone);
+        db.prepare('DELETE FROM availability_rules').run();
+        const ins = db.prepare(
+          'INSERT INTO availability_rules (weekday, start_time, end_time) VALUES (?, ?, ?)',
+        );
+        for (const rule of rules) {
+          ins.run(rule.weekday, rule.startTime, rule.endTime);
+        }
+      });
+      replace();
       return this.getAvailability();
     },
 
@@ -180,11 +178,11 @@ export function createStore() {
       return row ?? null;
     },
     createBooking({ eventTypeId, startsAt, endsAt, guestName, guestEmail, comment }) {
-      const id = nextBookingId();
       const createdAt = new Date().toISOString();
-      db.prepare(
-        'INSERT INTO bookings (id, status, created_at, event_type_id, starts_at, ends_at, guest_name, guest_email, comment) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      ).run(id, 'active', createdAt, eventTypeId, startsAt, endsAt, guestName, guestEmail, comment ?? null);
+      const result = db.prepare(
+        'INSERT INTO bookings (status, created_at, event_type_id, starts_at, ends_at, guest_name, guest_email, comment) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      ).run('active', createdAt, eventTypeId, startsAt, endsAt, guestName, guestEmail, comment ?? null);
+      const id = Number(result.lastInsertRowid);
       return { id, status: 'active', createdAt, eventTypeId, startsAt, endsAt, guestName, guestEmail, ...(comment !== undefined && { comment }) };
     },
     cancelBooking(booking) {
