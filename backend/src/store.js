@@ -102,9 +102,8 @@ export function createStore() {
     },
 
     checkCredentials(email, password) {
-      const row = db.prepare('SELECT password FROM owner WHERE id = 1').get();
-      return row && email === db.prepare('SELECT email FROM owner WHERE id = 1').get().email &&
-        password === row.password;
+      const row = db.prepare('SELECT email, password FROM owner WHERE id = 1').get();
+      return row && row.email === email && row.password === password;
     },
 
     createSession() {
