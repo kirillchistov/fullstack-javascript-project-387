@@ -1,6 +1,6 @@
 {
   "name": "call-calendar",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Запись на звонок — сервис бронирования времени (Hexlet fullstack project)",
   "private": true,
   "type": "module",
