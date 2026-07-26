@@ -23,6 +23,46 @@
 - PR с правками от агента и доработками после ревью.
 - Scheduled workflow с отчетом по регулярной проверке.
 
+## Шаг 6: устойчивость агентного процесса
+
+Аудит (26.07.2026). Run-ы смотреть здесь: [Actions → opencode](https://github.com/kirillchistov/fullstack-javascript-project-387/actions/workflows/opencode.yml), [Actions → lighthouse-nightly](https://github.com/kirillchistov/fullstack-javascript-project-387/actions/workflows/lighthouse-nightly.yml).
+
+### Триггеры
+- [x] Агент запускается только на `/oc` и `/opencode` (`if` в [opencode.yml](./.github/workflows/opencode.yml)).
+- [x] Нет запусков на каждый комментарий: за всё время 8 run-ов opencode — только на наши целевые комментарии (explain / fix / review).
+- [x] Защита от ботов: `github.event.comment.user.type != 'Bot'` — ответы `github-actions[bot]` не перезапускают workflow.
+
+### Permissions (минимум под задачу)
+| Workflow | Права | Оценка |
+|---|---|---|
+| `opencode.yml` | `contents/pull-requests/issues: write`, `id-token: write` | нужно для веток, PR и комментариев |
+| `lighthouse-nightly.yml` | `contents: read`, `issues: write`, `id-token: write` | без лишнего write в код |
+| `deploy-pages.yml` | `contents: read`, `pages/id-token: write` | только деплой Pages |
+| `release-please.yml` | `contents/pull-requests: write` | создание release-PR и тегов |
+| `ci.yml` | дефолт (read) | без write |
+
+### Контроль расходов
+- [x] Schedule: 1 раз/сутки (`30 3 * * *`, 06:30 МСК) + `workflow_dispatch`.
+- [x] Модель везде `opencode/big-pickle` (бесплатная Zen); платный ключ опционален.
+- [x] Где смотреть run-ы — ссылки выше.
+
+### Сценарии, которые уже отрабатывали
+- [x] Вызов в issue: [#1](https://github.com/kirillchistov/fullstack-javascript-project-387/issues/1), triage [#2](https://github.com/kirillchistov/fullstack-javascript-project-387/issues/2).
+- [x] PR и ревью: [#10](https://github.com/kirillchistov/fullstack-javascript-project-387/pull/10) (создание + правки по общему и построчному `/oc`).
+- [x] Scheduled-workflow: [lighthouse-nightly](https://github.com/kirillchistov/fullstack-javascript-project-387/actions/workflows/lighthouse-nightly.yml) (проверен вручную; cron настроен), отчёт [#14](https://github.com/kirillchistov/fullstack-javascript-project-387/issues/14).
+
+### Самооценка эффективности агента
+
+| Сценарий | Итерации | Итог |
+|---|---|---|
+| `/oc explain` в тестовом issue #1 | 1 (после настройки workflow) | С первого прохода |
+| Triage расплывчатого issue #2 | 1 | С первого прохода — точный разбор in-memory store |
+| `/oc fix` → PR #10 | 2 | 1-й раз упал на `persist-credentials`; 2-й — PR готов |
+| Ревью PR (общий + построчный `/oc`) | 1+1 | Оба замечания с первого прохода |
+| Lighthouse nightly + issue | 1 (+ мелкий фикс git identity) | Отчёт и issue созданы; job формально упал на git |
+
+**Итог:** из 5 продуктовых сценариев 3 решены с первого прохода агента, 2 потребовали доработки инфраструктуры (креды git, identity) — не логики задачи. Признак хороший: где задача сформулирована ясно, агент справляется с первого раза; итерации уходили на обвязку CI.
+
 ## Шаг 5:
 - [x] Добавь повторяющуюся задачу с запуском по расписанию.
 - [x] Добавь возможность запускать ту же задачу вручную.

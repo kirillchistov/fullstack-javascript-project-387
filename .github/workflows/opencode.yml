@@ -17,9 +17,12 @@ on:
 
 jobs:
   opencode:
+    # Только целевые команды; игнорируем ботов (защита от самозапуска
+    # на ответ github-actions[bot] / OpenCode App).
     if: |
-      contains(github.event.comment.body, '/oc') ||
-      contains(github.event.comment.body, '/opencode')
+      github.event.comment.user.type != 'Bot' &&
+      (contains(github.event.comment.body, '/oc') ||
+       contains(github.event.comment.body, '/opencode'))
     runs-on: ubuntu-latest
     permissions:
       id-token: write
