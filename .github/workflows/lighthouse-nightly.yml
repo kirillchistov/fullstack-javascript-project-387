@@ -62,6 +62,12 @@ jobs:
           path: lighthouse-report/
           retention-days: 14
 
+      # OpenCode иногда трогает git даже без коммитов — без identity шаг падает.
+      - name: Настроить git identity для агента
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
       - name: Утренний разбор от агента
         uses: anomalyco/opencode/github@latest
         env:
@@ -86,4 +92,5 @@ jobs:
                - в конце добавь ссылку на запуск с полным отчётом-артефактом:
                  ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-            Ничего не коммить и не открывай PR — только issue.
+            После создания issue остановись. Не коммить, не пушить, не открывать PR,
+            не вызывать git commit / git push.
