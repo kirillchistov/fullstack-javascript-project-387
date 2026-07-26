@@ -1,0 +1,89 @@
+# Ночная проверка качества демо-страницы через Lighthouse CLI.
+# Запускается по расписанию (03:30 UTC = 06:30 МСК) и вручную из вкладки Actions.
+# Отчёт (HTML + JSON) сохраняется артефактом, баллы — в summary запуска,
+# а агент OpenCode утром создаёт issue с разбором и рекомендациями.
+name: lighthouse-nightly
+
+on:
+  schedule:
+    - cron: "30 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  id-token: write
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    env:
+      DEMO_URL: https://kirillchistov.github.io/fullstack-javascript-project-387/
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Run Lighthouse CLI
+        run: |
+          mkdir -p lighthouse-report
+          npx --yes lighthouse@12 "$DEMO_URL" \
+            --output html --output json \
+            --output-path ./lighthouse-report/report \
+            --only-categories=performance,accessibility,best-practices,seo \
+            --chrome-flags="--headless --no-sandbox"
+
+      - name: Баллы в summary запуска
+        run: |
+          python3 - <<'EOF'
+          import json, os
+          data = json.load(open('lighthouse-report/report.report.json'))
+          order = ['performance', 'accessibility', 'best-practices', 'seo']
+          lines = [
+              f"## Lighthouse: {data['finalDisplayedUrl']}",
+              '',
+              '| Категория | Балл |',
+              '|---|---|',
+          ]
+          for key in order:
+              cat = data['categories'][key]
+              score = round(cat['score'] * 100)
+              mark = '' if score >= 90 else ' :warning:'
+              lines.append(f"| {cat['title']} | {score}{mark} |")
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
+              f.write('\n'.join(lines) + '\n')
+          EOF
+
+      - name: Сохранить отчёт как артефакт
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-report
+          path: lighthouse-report/
+          retention-days: 14
+
+      - name: Утренний разбор от агента
+        uses: anomalyco/opencode/github@latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          model: opencode/big-pickle
+          use_github_token: true
+          prompt: |
+            Ты готовишь утренний отчёт для команды по итогам ночной проверки качества.
+
+            В файле lighthouse-report/report.report.json лежит свежий JSON-отчёт
+            Lighthouse по демо-странице Call Calendar (${{ env.DEMO_URL }}).
+
+            1. Прочитай баллы категорий (categories) и найди проблемные аудиты
+               (score < 0.9), выбери до пяти самых значимых.
+            2. Создай issue командой `gh issue create` (GH_TOKEN уже настроен):
+               - заголовок: «Ночной Lighthouse-отчёт <сегодняшняя дата YYYY-MM-DD>»;
+               - тело на русском: таблица баллов по категориям; список главных
+                 проблем с указанием, какие файлы проекта затронуты (код фронтенда
+                 в frontend/src); итоговая рекомендация — какие правки нужны.
+                 Если все категории ≥ 90 — напиши, что правки не требуются.
+               - в конце добавь ссылку на запуск с полным отчётом-артефактом:
+                 ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            Ничего не коммить и не открывай PR — только issue.
