@@ -1,7 +1,7 @@
 # Ночная проверка качества демо-страницы через Lighthouse CLI.
 # Запускается по расписанию (03:30 UTC = 06:30 МСК) и вручную из вкладки Actions.
-# Отчёт (HTML + JSON) сохраняется артефактом, баллы — в summary запуска,
-# а агент OpenCode утром создаёт issue с разбором и рекомендациями.
+# Отчёт (HTML + JSON) — артефакт; баллы — в summary; утренний issue — из JSON
+# (без OpenCode: агент после разбора трогал git и ронял job на identity).
 name: lighthouse-nightly
 
 on:
@@ -12,16 +12,16 @@ on:
 permissions:
   contents: read
   issues: write
-  id-token: write
 
 jobs:
   lighthouse:
     runs-on: ubuntu-latest
     env:
       DEMO_URL: https://kirillchistov.github.io/fullstack-javascript-project-387/
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v5
         with:
           persist-credentials: false
 
@@ -62,35 +62,84 @@ jobs:
           path: lighthouse-report/
           retention-days: 14
 
-      # OpenCode иногда трогает git даже без коммитов — без identity шаг падает.
-      - name: Настроить git identity для агента
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-      - name: Утренний разбор от агента
-        uses: anomalyco/opencode/github@latest
+      - name: Утренний issue с разбором
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          model: opencode/big-pickle
-          use_github_token: true
-          prompt: |
-            Ты готовишь утренний отчёт для команды по итогам ночной проверки качества.
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python3 - <<'EOF'
+          import json, os, subprocess, datetime
 
-            В файле lighthouse-report/report.report.json лежит свежий JSON-отчёт
-            Lighthouse по демо-странице Call Calendar (${{ env.DEMO_URL }}).
+          data = json.load(open('lighthouse-report/report.report.json'))
+          order = ['performance', 'accessibility', 'best-practices', 'seo']
+          today = datetime.date.today().isoformat()
+          title = f'Ночной Lighthouse-отчёт {today}'
 
-            1. Прочитай баллы категорий (categories) и найди проблемные аудиты
-               (score < 0.9), выбери до пяти самых значимых.
-            2. Создай issue командой `gh issue create` (GH_TOKEN уже настроен):
-               - заголовок: «Ночной Lighthouse-отчёт <сегодняшняя дата YYYY-MM-DD>»;
-               - тело на русском: таблица баллов по категориям; список главных
-                 проблем с указанием, какие файлы проекта затронуты (код фронтенда
-                 в frontend/src); итоговая рекомендация — какие правки нужны.
-                 Если все категории ≥ 90 — напиши, что правки не требуются.
-               - в конце добавь ссылку на запуск с полным отчётом-артефактом:
-                 ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          # Не дублируем issue, если за сегодня уже есть
+          existing = subprocess.check_output(
+              ['gh', 'issue', 'list', '--search', f'in:title "{title}"', '--json', 'number,title', '--limit', '5'],
+              text=True,
+          )
+          if any(i.get('title') == title for i in json.loads(existing)):
+              print(f'Issue уже есть: {title}')
+              raise SystemExit(0)
 
-            После создания issue остановись. Не коммить, не пушить, не открывать PR,
-            не вызывать git commit / git push.
+          rows = []
+          for key in order:
+              cat = data['categories'][key]
+              rows.append((cat['title'], round(cat['score'] * 100)))
+
+          # Топ проблемных аудитов (score < 0.9), до 5 штук
+          audits = data.get('audits', {})
+          problems = []
+          for aid, audit in audits.items():
+              score = audit.get('score')
+              if score is None or score >= 0.9:
+                  continue
+              if audit.get('scoreDisplayMode') in ('informative', 'manual', 'notApplicable'):
+                  continue
+              problems.append((score, audit.get('title') or aid, audit.get('description') or ''))
+          problems.sort(key=lambda x: x[0])
+          problems = problems[:5]
+
+          lines = [
+              f'## Баллы по категориям',
+              '',
+              '| Категория | Балл |',
+              '|---|---|',
+          ]
+          for name, score in rows:
+              mark = '' if score >= 90 else ' ⚠️'
+              lines.append(f'| {name} | {score}{mark} |')
+
+          lines += ['', '## Главные проблемы (score < 0.9)', '']
+          if not problems:
+              lines.append('Критических аудитов нет.')
+          else:
+              for i, (score, title_a, desc) in enumerate(problems, 1):
+                  short = desc.split('.')[0] + '.' if desc else ''
+                  lines.append(f'{i}. **{title_a}** (score {score}) — {short}')
+
+          all_ok = all(s >= 90 for _, s in rows)
+          lines += ['', '## Рекомендации', '']
+          if all_ok:
+              lines.append('Все категории ≥ 90 — правки не требуются.')
+          else:
+              lines += [
+                  'Смотрите проблемные аудиты выше и код в `frontend/src/` / `frontend/index.html`.',
+                  'Типичные направления: code-splitting бандла, контрастность текста,',
+                  '`aria-label` у контролов календаря, `<meta name="description">`.',
+              ]
+
+          lines += [
+              '',
+              '---',
+              '',
+              f'Полный HTML/JSON-отчёт (артефакт): {os.environ["RUN_URL"]}',
+          ]
+          body = '\n'.join(lines)
+
+          subprocess.check_call(
+              ['gh', 'issue', 'create', '--title', title, '--body', body],
+          )
+          print(f'Создан issue: {title}')
+          EOF
