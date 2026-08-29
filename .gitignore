@@ -5,8 +5,9 @@ dist/
 *.log
 .DS_Store
 
-# SQLite database
 data/
+*.sqlite
+*.sqlite-journal
 
 # Playwright
 e2e/test-results/

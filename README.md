@@ -3,12 +3,11 @@
 
 ## Call Calendar (AI version)
 
-- «Запись на звонок» - базовый продукт уже реализован: сервис бронирования слотов по мотивам Cal.com. В этом продолжении мы не расширяем продуктовую функциональность, а добавляем организационную обвязку: — сервис бронирования времени по мотивам [Cal.com](https://cal.com/) (сервиса, где пользователь публикует доступные интервалы, а другой человек выбирает свободное время и бронирует встречу).
-- [Репозиторий проекта](https://github.com/kirillchistov/fullstack-javascript-project-387)
-- [Демо на GitHub Pages](https://kirillchistov.github.io/fullstack-javascript-project-387/) — упрощённая версия: API эмулируется прямо в браузере (слоты вычисляются из правил доступности, брони живут в localStorage). Для входа владельца подойдут любые email и пароль.
-- Деплой автоматический: workflow [deploy-pages.yml](./.github/workflows/deploy-pages.yml) собирает `npm run build:demo` при пуше в `main` (в настройках репозитория Pages должен быть переключён на «GitHub Actions»).
-- [Полное приложение на Render](https://call-calendar-onli.onrender.com/)
-- Проект учит, как использовать агента как участника командного процесса, а не только как локального помощника в IDE/CLI.
+- «Запись на звонок» — сервис бронирования по мотивам [Cal.com](https://cal.com/): владелец публикует доступное время по ссылке `/u/{slug}`, гость выбирает слот в своём часовом поясе и записывается.
+- Продуктовая база перенесена из [проекта 386 (sprint11)](https://github.com/kirillchistov/fullstack-javascript-project-386/tree/sprint11): регистрация, типы встреч, SQLite, кастомное расписание, буферы, уведомления, busy-sync, команды, серии, аналитика, платные встречи, freemium.
+- В этом репозитории поверх продукта — организационная обвязка с агентом OpenCode (issues, PR, ночной Lighthouse).
+- [Репозиторий](https://github.com/kirillchistov/fullstack-javascript-project-387) · [Демо на GitHub Pages](https://kirillchistov.github.io/fullstack-javascript-project-387/) · [Render](https://call-calendar-onli.onrender.com/)
+- Деплой демо: [deploy-pages.yml](./.github/workflows/deploy-pages.yml) (`npm run build:demo` при пуше в `main`).
 
 ## Задачи этого проекта:
 - Настройка OpenCode GitHub App.
@@ -23,7 +22,7 @@
 - PR с правками от агента и доработками после ревью.
 - Scheduled workflow с отчетом по регулярной проверке.
 
-## Шаг 6: устойчивость агентного процесса
+## Аудит
 
 Аудит (26.07.2026). Run-ы смотреть здесь: [Actions → opencode](https://github.com/kirillchistov/fullstack-javascript-project-387/actions/workflows/opencode.yml), [Actions → lighthouse-nightly](https://github.com/kirillchistov/fullstack-javascript-project-387/actions/workflows/lighthouse-nightly.yml).
 
@@ -36,7 +35,7 @@
 | Workflow | Права | Оценка |
 |---|---|---|
 | `opencode.yml` | `contents/pull-requests/issues: write`, `id-token: write` | нужно для веток, PR и комментариев |
-| `lighthouse-nightly.yml` | `contents: read`, `issues: write`, `id-token: write` | без лишнего write в код |
+| `lighthouse-nightly.yml` | `contents: read`, `issues: write` | без лишнего write в код |
 | `deploy-pages.yml` | `contents: read`, `pages/id-token: write` | только деплой Pages |
 | `release-please.yml` | `contents/pull-requests: write` | создание release-PR и тегов |
 | `ci.yml` | дефолт (read) | без write |

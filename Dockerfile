@@ -9,7 +9,7 @@ RUN npm ci
 COPY frontend/ ./
 RUN npm run build
 
-# --- Сборка зависимостей бэкенда (нужен toolchain для better-sqlite3) ------
+# --- Сборка зависимостей бэкенда (toolchain для better-sqlite3) ------------
 FROM node:22-alpine AS backend-deps
 RUN apk add --no-cache python3 make g++
 WORKDIR /build/backend
@@ -30,10 +30,8 @@ COPY backend/src backend/src
 COPY --from=frontend /build/frontend/dist public
 
 ENV STATIC_DIR=/app/public
-# SQLite-файл по умолчанию; на Render/Volumes переопределите DATABASE_PATH
-ENV DATABASE_PATH=/app/data/call-calendar.db
+ENV DATABASE_PATH=/app/data/call-calendar.sqlite
 RUN mkdir -p /app/data
-
 EXPOSE 5001
 
 CMD ["node", "backend/src/index.js"]
