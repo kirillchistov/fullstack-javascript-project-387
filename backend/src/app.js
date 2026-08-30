@@ -79,6 +79,9 @@ export function buildApp({ logger = false, databasePath } = {}) {
 
   app.register(cookie);
 
+  // Healthcheck для Render/оркестраторов (без авторизации, всегда 200).
+  app.get('/api/health', async () => ({ status: 'ok' }));
+
   const staticDir = process.env.STATIC_DIR;
   if (staticDir && fs.existsSync(staticDir)) {
     app.register(fastifyStatic, { root: path.resolve(staticDir) });

@@ -8,7 +8,9 @@ services:
     runtime: docker
     plan: free
     dockerfilePath: ./Dockerfile
-    healthCheckPath: /api/public/kirill
+    # Не /api/event-types: в API 0.4.0 он требует сессию владельца (401) —
+    # Render считает это падением healthcheck и убивает деплой по таймауту.
+    healthCheckPath: /api/health
     envVars:
       - key: OWNER_PASSWORD
         sync: false

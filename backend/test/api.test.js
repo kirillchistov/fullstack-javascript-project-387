@@ -23,6 +23,14 @@ function build() {
   return buildApp({ databasePath: ':memory:' });
 }
 
+test('healthcheck доступен без авторизации', async () => {
+  const app = build();
+  const res = await app.inject({ method: 'GET', url: '/api/health' });
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.json().status, 'ok');
+  await app.close();
+});
+
 async function login(app, email = 'owner@example.com', password = 'secret') {
   const res = await app.inject({
     method: 'POST',
