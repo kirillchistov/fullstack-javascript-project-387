@@ -1,7 +1,7 @@
 {
   "extends": ["@commitlint/config-conventional"],
   "rules": {
-    "scope-enum": [2, "always", ["spec", "backend", "frontend", "e2e", "ci", "docs", "deps"]],
+    "scope-enum": [2, "always", ["spec", "backend", "frontend", "e2e", "ci", "docs", "deps", "main"]],
     "subject-case": [0]
   }
 }
