@@ -1,12 +1,9 @@
-# Вызов агента OpenCode из комментариев в issue и PR: /oc или /opencode
+# Интерактивный вызов агента OpenCode из комментариев: /oc или /opencode
 # Документация: https://opencode.ai/docs/github/
-# Модель — через OpenCode Zen (https://opencode.ai/docs/zen/):
-#   big-pickle — бесплатная; для платных моделей (например,
-#   opencode/claude-sonnet-4-5) добавьте секрет OPENCODE_API_KEY
-#   в Settings → Secrets and variables → Actions.
-# Работает через встроенный GITHUB_TOKEN раннера (без установки GitHub App);
-# альтернатива — установить https://github.com/apps/opencode-agent,
-# тогда комментарии будут приходить от имени приложения.
+# Требуется GitHub App: https://github.com/apps/opencode-agent
+# (токен приложения через OIDC; комментарии и PR — от имени App).
+# Модель — OpenCode Zen; для платных моделей добавьте OPENCODE_API_KEY
+# в Settings → Secrets and variables → Actions.
 name: opencode
 
 on:
@@ -17,32 +14,28 @@ on:
 
 jobs:
   opencode:
-    # Только целевые команды; игнорируем ботов (защита от самозапуска
-    # на ответ github-actions[bot] / OpenCode App).
+    # Только целевые команды; игнорируем ботов (защита от самозапуска).
     if: |
       github.event.comment.user.type != 'Bot' &&
-      (contains(github.event.comment.body, '/oc') ||
-       contains(github.event.comment.body, '/opencode'))
+      (
+        startsWith(github.event.comment.body, '/oc') ||
+        contains(github.event.comment.body, ' /oc') ||
+        startsWith(github.event.comment.body, '/opencode') ||
+        contains(github.event.comment.body, ' /opencode')
+      )
     runs-on: ubuntu-latest
     permissions:
       id-token: write
-      contents: write
-      pull-requests: write
-      issues: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
           fetch-depth: 1
-          # Работаем через GITHUB_TOKEN (use_github_token), поэтому git в раннере
-          # должен сохранить учётные данные — иначе агент не сможет запушить ветку.
-          persist-credentials: true
+          persist-credentials: false
 
       - name: Run OpenCode
         uses: anomalyco/opencode/github@latest
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           model: opencode/big-pickle
-          use_github_token: true
