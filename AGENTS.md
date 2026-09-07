@@ -49,6 +49,26 @@ ci: запуск e2e в GitHub Actions
   их актуальность);
 - не коммитить без явной просьбы владельца репозитория.
 
+## Запуск приложения локально
+
+Корень (один раз): `npm install` — TypeSpec + Prism.
+
+```bash
+# Терминал 1 — API (порт 5001)
+cd backend && npm install && npm start
+# или с автоперезапуском: npm run dev
+# переменные (опционально): PORT, OWNER_EMAIL, OWNER_PASSWORD, OWNER_NAME,
+# OWNER_SLUG, OWNER_TIMEZONE, DATABASE_PATH, PUBLIC_BASE_URL
+
+# Терминал 2 — UI (порт 5173, /api проксируется на 5001)
+cd frontend && npm install && npm run dev
+# API_PROXY_TARGET=http://localhost:5001 — если бэкенд на другом адресе
+```
+
+UI: http://localhost:5173 · публичная страница сида: `/u/kirill` · вход по умолчанию `owner@example.com` / `secret`.
+
+Вместо бэкенда для работы только над фронтом: из корня `npm run api:mock` (Prism на 5001).
+
 ## Проверки перед коммитом
 
 - `cd backend && npm test` — бизнес-правила API;
