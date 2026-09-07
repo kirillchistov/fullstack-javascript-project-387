@@ -1,0 +1,43 @@
+# Автотриаж новых issue агентом OpenCode.
+# Документация: https://opencode.ai/docs/github/ (Issues Triage Example)
+# Требуется GitHub App: https://github.com/apps/opencode-agent
+name: opencode-triage
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  triage:
+    if: github.event.issue.user.type != 'Bot'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      issues: write
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Run OpenCode
+        uses: anomalyco/opencode/github@latest
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+        with:
+          model: opencode/big-pickle
+          prompt: |
+            Ты делаешь triage нового issue в репозитории Call Calendar.
+
+            1. Прочитай заголовок и тело issue, при необходимости загляни в
+               AGENTS.md, ROADMAP.md и релевантный код (backend/, frontend/, spec/).
+            2. Ответь комментарием на русском:
+               - вероятная первопричина или тип задачи (bug / feature / docs);
+               - затронутые модули/файлы;
+               - как воспроизвести (если bug) или критерий готовности (если feature);
+               - предлагаемый следующий шаг (нужен /oc fix, уточнение у автора, и т.п.).
+            3. Если issue спам, пустой или не по теме — коротко отметь это и не
+               предлагай реализацию.
+
+            Не создавай ветки, коммиты и PR. Только комментарий в этом issue.
