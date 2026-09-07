@@ -1,0 +1,45 @@
+# Авторевью pull request агентом OpenCode.
+# Документация: https://opencode.ai/docs/github/ (Pull Request Example)
+# Требуется GitHub App: https://github.com/apps/opencode-agent
+name: opencode-review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  review:
+    if: |
+      github.event.pull_request.user.type != 'Bot' &&
+      github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Run OpenCode
+        uses: anomalyco/opencode/github@latest
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+        with:
+          model: opencode/big-pickle
+          prompt: |
+            Сделай code review этого pull request для Call Calendar.
+
+            Проверь по пунктам и оставь комментарий в PR на русском:
+            - соответствие Design First / AGENTS.md (контракт, Conventional Commits);
+            - потенциальные баги и гонки;
+            - безопасность и права доступа;
+            - качество тестов (есть ли покрытие критичных сценариев);
+            - конкретные предложения по правкам (файлы/места), без переписывания
+              всего диффа.
+
+            Не коммить и не пушь изменения. Только ревью-комментарий.
+            Если замечаний нет — коротко напиши, что блокирующих проблем не видно.
